@@ -63,6 +63,8 @@ main :: IO ()
 main = do
   tt <- runTestTT tests
   input <- readFile "input.txt"
-  print $ solve 'A' $ input
-  print $ solve 'B' $ input
+  putStrLn "Solution for A:"
+  print . solve 'A' $ input
+  putStrLn "Solution for B:"
+  print . solve 'B' $ input
 
