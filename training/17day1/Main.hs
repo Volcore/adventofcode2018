@@ -24,10 +24,6 @@ solve :: Char -> String -> Int
 solve 'A' = sum . filterPairs . makePairs . parse
 solve 'B' = sum . filterPairs . makePairsB . parse
 
--- Solves the second puzzle
-solveB :: String -> Int
-solveB = sum . filterPairs . makePairsB . parse
-
 -- Parse the input by filtering out all numbers and converting them to int
 parse :: String -> [Int]
 parse = map digitToInt . filter isDigit
