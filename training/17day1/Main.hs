@@ -24,21 +24,28 @@ solve :: Char -> String -> Int
 solve 'A' = sum . filterPairs . makePairs . parse
 solve 'B' = sum . filterPairs . makePairsB . parse
 
--- Parse the input by filtering out all numbers and converting them to int
+-- Parse the input by filtering out all non-numbers and converting them to int
 parse :: String -> [Int]
 parse = map digitToInt . filter isDigit
 
 -- Create pairs for A by rotating a copy of the list by one and zipping them
+-- Effectively moves the first element to the back, and creates a new list of
+-- tuples.
 makePairs :: [a] -> [(a,a)]
 makePairs [] = []
 makePairs (x:xs) = zip (x:xs) (xs ++ [x])
 
 -- Create pairs for B by rotating through half the list and zipping them
+-- Shifts the entire list by half around, and creates a list of tuples combining
+-- both lists.
 makePairsB :: [a] -> [(a,a)]
 makePairsB xs = zip xs ((drop n xs) ++ (take n xs))
   where n = (length xs) `div` 2
 
--- Filter out all pairs that are not equal and select only first element
+-- Filter out all pairs that are not equal and reduce to list of Int by picking
+-- only the first of two identical elements of the tuple
+--   "uncurry (==)" turns the == operator into a function that we can filter with
+--   "map fst" picks the first element of each tuple
 filterPairs :: Eq a => [(a,a)] -> [a]
 filterPairs = map fst . filter (uncurry (==))
 
