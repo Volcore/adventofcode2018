@@ -46,8 +46,8 @@ filterPairs = map fst . filter (uncurry (==))
 -- Day-agnostic part. Is the same every day of AoC
 --------------------------------------------------------------------------------
 
--- The testing function. Will run the solution A or B on the input and check
--- the output
+-- The testing function. Will run the solve function for challenge A or B on the
+-- given input and check the output.
 testSolution :: Char -> String -> Int -> Test
 testSolution c x y = TestCase (assertEqual ([c] ++ " " ++ x) (solve c x) y)
 
