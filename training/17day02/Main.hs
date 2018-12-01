@@ -1,7 +1,6 @@
 module Main where
 
 import Test.HUnit
-import Data.Char (isDigit, digitToInt)
 import Data.List.Split
 
 --------------------------------------------------------------------------------
@@ -18,7 +17,7 @@ solve :: Char -> String -> Int
 solve 'A' = sum . map findMinMaxDiff . parse
 solve 'B' = sum . map findEvenDiv . parse
 
--- Parse the input by filtering out all non-numbers and converting them to int
+-- Parse the input
 parse :: String -> [[Int]]
 parse = map (map read) -- convert to int
       . map (words) -- split on whitespace
@@ -48,7 +47,7 @@ outerProduct xs = [(x,y) | x <- xs, y <- xs, x /= y]
 -- The testing function. Will run the solve function for challenge A or B on the
 -- given input and check the output.
 testSolution :: Char -> String -> Int -> Test
-testSolution c x y = TestCase (assertEqual ([c] ++ "\n" ++ x) (solve c x) y)
+testSolution c x y = TestCase (assertEqual ([c] ++ "\n" ++ x) y (solve c x))
 
 -- The main function. Runs the tests, loads the input and runs the solutions
 main :: IO ()
