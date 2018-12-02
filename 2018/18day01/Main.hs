@@ -27,8 +27,7 @@ solve 'B' = findDuplicate . cycle . parse
 parse :: String -> [Int]
 parse = map read -- convert to int
       . map (filter (\x -> (x /= '+'))) -- Remove plus
-      . filter (\x -> (length x /= 0)) -- filter all empty lines
-      . splitOn "\n" -- split lines
+      . words
 
 -- find duplicates in an infinite list
 findDuplicate :: [Int] -> Int
