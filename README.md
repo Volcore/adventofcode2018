@@ -11,3 +11,6 @@ Haskell before. This is going to be fun!
   around solving the tests first
 - **Easy to understand:** Not aiming for the most fancy and artful programs, but
   rather easy to understand while still properly using concepts from the haskell
+  
+## Note
+The input is unique to every user. Don't use my input to submit your results ;)
