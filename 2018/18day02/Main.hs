@@ -10,11 +10,11 @@ import Data.Int
 --------------------------------------------------------------------------------
 
 tests = TestList [
-  testSolution solveA "abcdef" 0,
-  testSolution solveA "bababc" 1,
-  testSolution solveA "ababab" 0,
-  testSolution solveA "abcdef\nbababc\nabbcde\nabcccd\naabcdd\nabcdee\nababab" 12,
-  testSolution solveB "abcde\nfghij\nklmno\npqrst\nfguij\naxcye\nwvxyz" "fgij"
+  addTest solveA "abcdef" 0,
+  addTest solveA "bababc" 1,
+  addTest solveA "ababab" 0,
+  addTest solveA "abcdef\nbababc\nabbcde\nabcccd\naabcdd\nabcdee\nababab" 12,
+  addTest solveB "abcde\nfghij\nklmno\npqrst\nfguij\naxcye\nwvxyz" "fgij"
   ]
 
 -- Solving function for part A
@@ -86,8 +86,8 @@ findPrefix (x:xs) (y:ys) = if x ==y then [x] ++ findPrefix xs ys else []
 
 -- The testing function. Will run the solve function for challenge A or B on the
 -- given input and check the output.
-testSolution :: (Show a, Eq a) => (String -> a) -> String -> a -> Test
-testSolution f x y = TestCase (assertEqual x y (f x))
+addTest :: (Show a, Eq a) => (String -> a) -> String -> a -> Test
+addTest f x y = TestCase (assertEqual x y (f x))
 
 -- The main function. Runs the tests, loads the input and runs the solutions
 main :: IO ()
@@ -98,9 +98,3 @@ main = do
   print . solveA $ input
   putStrLn "Solution for B:"
   print . solveB $ input
-  -- Additional tests
-  -- print . findPrefix "aabbcc" $ "aabdcc"
-  -- print . findPostfix "aabbcc" $ "aabdcc"
-  -- print . isSimilar "aabbcc" $ "aabdcc"
-  -- print . isSimilar "aabbcc" $ "adkj23"
-  -- print . findMatch $ ["aab", "bcd", "bed"]
