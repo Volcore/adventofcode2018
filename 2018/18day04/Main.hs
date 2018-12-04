@@ -34,7 +34,7 @@ tests = TestList [
   addTest solveB testInput 4455
   ]
 
-data LogEntryType = Start | Sleep | Wake
+data LogEntryType = Start Int | Sleep | Wake
   deriving (Show, Eq, Ord)
 
 data LogEntry = LogEntry {
@@ -43,8 +43,7 @@ data LogEntry = LogEntry {
     day :: Int,
     hour :: Int,
     minute :: Int,
-    entryType :: LogEntryType,
-    guardId :: Int
+    entryType :: LogEntryType
   }
   deriving (Show, Ord, Eq)
 
@@ -54,17 +53,13 @@ instance Read LogEntry where
                                  (read d)
                                  (read h)
                                  (read min)
-                                 getType getId, [])]
+                                 (event rest), [])]
     -- read the log entry by splitting it and then working on each entries
     -- does a heuristic detection of the message by looking at the first word
-    where (_:y:m:d:h:min:_:t:ti:_) = Split.splitOneOf "[]-: " value
-          getType = case t of
-            "Guard" -> Start
-            "falls" -> Sleep
-            otherwise -> Wake
-          getId = case t of
-            "Guard" -> read . drop 1 $ ti
-            otherwise -> 0
+    where (_:y:m:d:h:min:_:rest) = Split.splitOneOf "[]-: " value
+          event ["Guard", sid, _, _] = Start (read . drop 1 $ sid)
+          event ["falls", _] = Sleep
+          event _ = Wake
 
 -- Parse the input
 parse :: String -> [LogEntry]
@@ -85,11 +80,10 @@ analyse = fst . foldl (analyse') (Map.empty, 0)
           -- For the start case create a new entry in the map for this guard
           -- if it does not exist, otherwise just remember that this guard
           -- is on duty now in cgid
-          Start -> case Map.member newgid m of          
+          Start newgid -> case Map.member newgid m of          
                       False -> (Map.insert newgid newgi m, newgid)
                       True -> (m, newgid)             
-                     where newgid = guardId le
-                           newgi = (GuardInfo 0 0 (replicate 60 0) newgid)
+                     where newgi = (GuardInfo 0 0 (replicate 60 0) newgid)
           -- Guard goes to sleep. remember the time when
           Sleep -> (Map.adjust (update) cgid m, cgid)
             where update x = x { sleepstart = (minute le) }
