@@ -49,22 +49,21 @@ data LogEntry = LogEntry {
   deriving (Show, Ord, Eq)
 
 instance Read LogEntry where
-  readsPrec _ value = [(LogEntry (readInt 1)
-                                 (readInt 2)
-                                 (readInt 3)
-                                 (readInt 4)
-                                 (readInt 5)
+  readsPrec _ value = [(LogEntry (read y)
+                                 (read m)
+                                 (read d)
+                                 (read h)
+                                 (read min)
                                  getType getId, [])]
     -- read the log entry by splitting it and then working on each entries
     -- does a heuristic detection of the message by looking at the first word
-    where list = Split.splitOneOf "[]-: " value
-          readInt idx = read $ (list !! idx)
-          getType = case list !! 7 of
+    where (_:y:m:d:h:min:_:t:ti:_) = Split.splitOneOf "[]-: " value
+          getType = case t of
             "Guard" -> Start
             "falls" -> Sleep
             otherwise -> Wake
-          getId = case list !! 7 of
-            "Guard" -> read . drop 1 $ (list !! 8)
+          getId = case t of
+            "Guard" -> read . drop 1 $ ti
             otherwise -> 0
 
 -- Parse the input
