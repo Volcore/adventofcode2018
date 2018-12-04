@@ -120,10 +120,24 @@ solveA = out . findSleeper . analyse . parse
   where maxIndex xs = head $ filter ((== maximum xs) . (xs !!)) [0..]
         out gi = (maxIndex (sleeplog gi)) * (gid gi)
 
+-- Searches all guard infos for the guard that sleeps the most on a given minute
+-- and returns guardid, minute and how often he sleeps on that minute
+findSleeperB :: Map Int GuardInfo -> (Int, Int, Int)
+findSleeperB = foldl (find) (0, 0, 0) . Map.toList
+  where find (maxgid, maxminute, maxcount) (cgid, gi) = if (fst cur) > maxcount
+          -- if this guard sleeps more than the current max, replace
+          then (cgid, (snd cur), (fst cur))
+          -- otherwise keep using the current max
+          else (maxgid, maxminute, maxcount)
+            -- to compute the current sleep, zip up minutes and counts, then
+            -- sort by count descending and return the first element
+            where cur = head
+                      . sortBy (flip compare)
+                      . zip (sleeplog gi) $ [0..59]
+
 -- Solving function for part B
 solveB :: String -> Int
-solveB = length . parse
-            -- NYI
+solveB = (\(x, y, z) -> x * y) . findSleeperB . analyse . parse
 
 --------------------------------------------------------------------------------
 -- Day-agnostic part. Is the same every day of AoC
