@@ -11,8 +11,8 @@ import qualified Data.List as List
 testInput = "1, 1\n1, 6\n8, 3\n3, 4\n5, 5\n8, 9"
 
 tests = TestList [
-  addTest solveA testInput 17
-  -- addTest solveB testInput 4
+  addTest solveA testInput 17,
+  addTest (solveB 32) testInput 16
   ]
 
 -- Parse the input
@@ -24,12 +24,6 @@ bounds :: [(Int, Int)] -> ((Int, Int), (Int, Int))
 bounds l = ((minimum x, maximum x), (minimum y, maximum y))
   where x = fst . unzip $ l
         y = snd . unzip $ l
-
--- Build a map with all grid cells
-buildGrid :: [(Int, Int)] -> [[Int]]
-buildGrid xs = [[nearest (x, y) xs | x <- [fst.fst$bnd .. snd.fst$bnd]] 
-                | y <- [fst.snd$bnd .. snd.snd$bnd]]
-  where bnd = bounds xs
 
 -- Finds the nearest element, or -1 if it's ambiguous
 nearest :: (Int, Int) -> [(Int, Int)] -> Int
@@ -58,9 +52,27 @@ getLargest xs =
                         ++ head (List.transpose x)
                         ++ last (List.transpose x)) xs
 
+-- Build a map with all grid cells
+buildGrid :: ((Int, Int) -> [(Int, Int)] -> Int) -> [(Int, Int)] -> [[Int]]
+buildGrid f xs = [[f (x, y) xs | x <- [fst.fst$bnd .. snd.fst$bnd]] 
+                | y <- [fst.snd$bnd .. snd.snd$bnd]]
+  where bnd = bounds xs
+
 -- Solving function for part A
 solveA :: String -> Int
-solveA = getLargest . buildGrid . parse
+solveA = getLargest . buildGrid (nearest) . parse
+
+-- Finds the nearest element, or -1 if it's ambiguous
+maxDist :: Int -> (Int, Int) -> [(Int, Int)] -> Int
+maxDist limit (x, y) xs 
+    | dist < limit = 1
+    | otherwise = 0
+  where
+    dist = sum . map (\(x', y') -> (abs (x-x')) + (abs (y-y'))) $ xs
+  
+-- Solving function for part A
+solveB :: Int -> String -> Int
+solveB limit = length . filter (== 1) . concat . buildGrid (maxDist limit) . parse
 
 --------------------------------------------------------------------------------
 -- Day-agnostic part. Is the same every day of AoC
@@ -78,3 +90,5 @@ main = do
   input <- readFile "input.txt"
   putStrLn "Solution for A:"
   print . solveA $ input
+  putStrLn "Solution for B:"
+  print . (solveB 10000) $ input
