@@ -9,26 +9,23 @@ import Debug.Trace
 --------------------------------------------------------------------------------
 
 tests = TestList [
-  addTest solveB 18 (90,269,16),
-  addTest solveB 42 (232,251,12),
   addTest (powerLevel 8) (3, 5) 4,
   addTest (powerLevel 57) (122, 79) (-5),
   addTest (powerLevel 39) (217, 196) 0,
   addTest (powerLevel 71) (101, 153) 4,
-  addTest solveA 18 (33,45),
-  addTest solveA 42 (21,61)
+  addTest solveB 18 (90,269,16),
+  addTest solveB 42 (232,251,12),
+  addTest solveA 18 (33,45,3),
+  addTest solveA 42 (21,61,3)
   ]
 
--- Solving function for part A
-solveA :: Int -> (Int, Int)
-solveA sn = snd . head . sortBy (flip compare) $ grid
-  where
-    grid = [(totalPower sn (x, y), (x, y)) | x <- [1..298], y <- [1..298]]
+fixCoords :: (Int, Int, Int) -> (Int, Int, Int)
+fixCoords (x,y,s) = (x+1,y+1,s)
 
-totalPower :: Int -> (Int, Int) -> Int
-totalPower sn (x,y) = sum $ mask
-  where
-    mask = [powerLevel sn (x+x', y+y') | x'<-[0..2] , y'<-[0..2]]
+-- Solving function for part A
+solveA :: Int -> (Int, Int, Int)
+solveA sn = fixCoords . findMaxForKernelSize 3 n . createSAT n . createGrid sn $ n
+  where n = 300
 
 powerLevel :: Int -> (Int, Int) -> Int
 powerLevel sn (x, y) = (thirdDigit (((rackId * y) + sn) * rackId)) - 5
@@ -36,17 +33,51 @@ powerLevel sn (x, y) = (thirdDigit (((rackId * y) + sn) * rackId)) - 5
     rackId = x + 10
     thirdDigit z = (z `quot` 100) - ((z `quot` 1000) * 10)
 
-totalPowerN :: Int -> (Int, Int, Int) -> Int
-totalPowerN sn (x,y,n) = sum $ mask
+totalPower :: [[Int]] -> (Int, Int, Int) -> Int
+totalPower s (x,y,n) = sat (yn, xn) + sat (y, x) - sat (y, xn) - sat (yn, x)
   where
-    mask = [powerLevel sn (x+x', y+y') | x'<-[0..(n-1)] , y'<-[0..(n-1)]]
+    xn = x+n
+    yn = y+n
+    sat (u,v)
+      | u <= 0 || v <= 0 = 0
+      | otherwise = s !!(u-1) !! (v-1)
+
+findMaxForKernelSize :: Int -> Int -> [[Int]] -> (Int, Int, Int)
+findMaxForKernelSize k n sat = snd . head . sortBy (flip compare) $ list
+  where
+    range = [0..(n-k)]
+    list = [(totalPower sat (x,y,k), (x,y,k)) | x <- range, y <- range]
 
 solveB :: Int -> (Int, Int, Int)
-solveB sn = snd . head . sortBy (flip compare) . foldl (f) [] $ [1..300]
+solveB sn = 
+  let 
+    n = 300
+    sat = createSAT n $ createGrid sn n
+    -- f x n = trace (show n ++ show x) head . sortBy (flip compare) $ grid n ++ [x]
+    f x k = head . sortBy (flip compare) $ grid k ++ [x]
+    range k = [0..(n-k)]
+    grid k = [(totalPower sat (x,y,k), (x,y,k)) | x <- range k, y <- range k]
+  in fixCoords . snd . foldl (f) (-9999,(0,0,0)) $ [1..n]
+
+-- Create a grid of dimension n
+createGrid :: Int -> Int -> [[Int]]
+createGrid sn n = [[powerLevel sn (x, y) | x <- [1..n]] | y <- [1..n]]
+
+-- Create a summed-area table
+createSAT :: Int -> [[Int]] -> [[Int]]
+createSAT n grid = foldl (nextRow) [] [0..n-1]
   where
-    f xs n = trace (show n) [head . sortBy (flip compare) $ grid n] ++ xs
-    range n = [1..(301-n)]
-    grid n = [(totalPowerN sn (x,y,n), (x,y,n)) | x <- range n, y <- range n]
+    nextRow sat y = sat ++ [foldl (nextElem) [] [0..n-1]]
+      where
+        nextElem row x = row ++ [grid!!y!!x
+                                + lookup (x-1,y)
+                                + lookup (x,y-1)
+                                - lookup (x-1,y-1)]
+          where
+            lookup (u,v)
+              | u < 0 || v < 0 = 0
+              | v == y = row!!u
+              | otherwise = sat!!v!!u
 
 --------------------------------------------------------------------------------
 -- Day-agnostic part. Is the same every day of AoC
@@ -63,7 +94,5 @@ main = do
   tt <- runTestTT tests
   putStrLn "Solution for A:"
   print . solveA $ 5153
-  -- putStrLn "Solution for B:"
-  -- print . solveA $ input
-  -- print . totalPower 5153 $ (2, 2)
-  -- print . snd . head . sortBy (flip compare) $ [(totalPower 5153 (x, y), (x, y)) | x <- [2..299], y <- [2..299]]
+  putStrLn "Solution for B:"
+  print . solveB $ 5153
