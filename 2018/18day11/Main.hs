@@ -19,6 +19,7 @@ tests = TestList [
   addTest solveA 42 (21,61,3)
   ]
 
+-- Fix coordinates to match what is needed for AOC tests and results
 fixCoords :: (Int, Int, Int) -> (Int, Int, Int)
 fixCoords (x,y,s) = (x+1,y+1,s)
 
@@ -27,33 +28,37 @@ solveA :: Int -> (Int, Int, Int)
 solveA sn = fixCoords . findMaxForKernelSize 3 n . createSAT n . createGrid sn $ n
   where n = 300
 
+-- Returns the power level for a certain coordinate and serial number
 powerLevel :: Int -> (Int, Int) -> Int
 powerLevel sn (x, y) = (thirdDigit (((rackId * y) + sn) * rackId)) - 5
   where
     rackId = x + 10
     thirdDigit z = (z `quot` 100) - ((z `quot` 1000) * 10)
 
+-- Computes the total power of a kernel of size k at position x y from the SAT
 totalPower :: [[Int]] -> (Int, Int, Int) -> Int
-totalPower s (x,y,n) = sat (yn, xn) + sat (y, x) - sat (y, xn) - sat (yn, x)
+totalPower s (x,y,k) = sat (yn, xn) + sat (y, x) - sat (y, xn) - sat (yn, x)
   where
-    xn = x+n
-    yn = y+n
+    xn = x+k
+    yn = y+k
     sat (u,v)
       | u <= 0 || v <= 0 = 0
       | otherwise = s !!(u-1) !! (v-1)
 
+-- Finds the maximum for a given kernel size by pulling the kernel over the 
+-- entire image
 findMaxForKernelSize :: Int -> Int -> [[Int]] -> (Int, Int, Int)
 findMaxForKernelSize k n sat = snd . head . sortBy (flip compare) $ list
   where
     range = [0..(n-k)]
     list = [(totalPower sat (x,y,k), (x,y,k)) | x <- range, y <- range]
 
+-- Solves B by creating the SAT and then searching for the maximum kernel
 solveB :: Int -> (Int, Int, Int)
 solveB sn = 
   let 
     n = 300
     sat = createSAT n $ createGrid sn n
-    -- f x n = trace (show n ++ show x) head . sortBy (flip compare) $ grid n ++ [x]
     f x k = head . sortBy (flip compare) $ grid k ++ [x]
     range k = [0..(n-k)]
     grid k = [(totalPower sat (x,y,k), (x,y,k)) | x <- range k, y <- range k]
