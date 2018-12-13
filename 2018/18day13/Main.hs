@@ -32,6 +32,6 @@ main = do
   tt <- runTestTT tests
   input <- readFile "input.txt"
   putStrLn "Solution for A:"
-  print . solveA $ input
+  -- print . solveA $ input
   putStrLn "Solution for B:"
-  print . solveB $ input
+  -- print . solveB $ input
