@@ -16,8 +16,17 @@ testInput = "/->-\\         \n\
             \\\-+-/  \\-+--/ \n\
             \  \\------/   "
 
+testInput2 = "/>-<\\  \n\
+             \|   |  \n\
+             \| /<+-\\\n\
+             \| | | v\n\
+             \\\>+</ |\n\
+             \  |   ^\n\
+             \  \\<->/"
+
 tests = TestList [
-  addTest solveA testInput (7,3)
+  addTest solveA testInput (7,3),
+  addTest solveB testInput2 (6,4)
   ]
 
 data Cart = Cart {
@@ -51,7 +60,7 @@ parse input = (lines . map (repl) $ input, findCarts)
 
 stepN :: Int -> MapState -> MapState
 stepN 0 ms = ms
-stepN i ms = stepN (i-1) (step ms)
+stepN i ms = stepN (i-1) (removeCrashed $ step ms)
 
 stepUntil :: MapState -> MapState
 stepUntil (map, carts)
@@ -60,17 +69,29 @@ stepUntil (map, carts)
 
 stepUntilLast :: MapState -> MapState
 stepUntilLast (map, carts)
-  | (length . filter (\(Cart _ _ d _) -> d /= 4) $ carts) > 1 = stepUntilLast . step $ (map, carts)
+  | (length . filter (\(Cart _ _ d _) -> d /= 4) $ carts) > 1 = stepUntilLast . removeCrashed . step $ (map, carts)
   | otherwise = (map, carts)
 
+removeCrashed :: MapState -> MapState
+removeCrashed (map, carts) = (map, filter (\(Cart _ _ d _) -> d /= 4) carts)
+
 step :: MapState -> MapState
-step (map, allcarts) = (map, foldl (up) [] sorted)
+step (map, carts) = (map, updateCarts)
   where
-    sorted = sort $ allcarts
-    up carts cart = carts ++ [collide (carts ++ drop (length carts + 1) sorted) . turn . move $ cart]
-    collide carts (Cart x y d t)
-      | null . filter (\(Cart x' y' _ _) -> x' == x && y' == y) $ carts = (Cart x y d t)
-      | otherwise = (Cart x y 4 t)
+    updateCarts = foldl (update) (sort $ carts) [0..(length carts) - 1]
+    update carts idx = collides idx
+                        (take idx carts
+                        ++ [turn . move $ carts!!idx]
+                        ++ drop (idx+1) carts)
+    collides idx carts
+      | (length . filter (\(Cart x' y' _ _) -> x' == x && y' == y) $ carts) <= 1 = carts
+      | otherwise = trace (show x ++ "/" ++ show y) [ if (x' == x && y' == y)
+                      then (Cart x' y' 4 t')
+                      else (Cart x' y' d' t')
+                      | (Cart x' y' d' t') <- carts]
+      where
+        x = cartX (carts!!idx)
+        y = cartY (carts!!idx)
     move (Cart x y d t)
       | d == 0 = (Cart (x+1) y d t)
       | d == 1 = (Cart x (y+1) d t)
@@ -139,6 +160,7 @@ main = do
   -- putStrLn $ testInput
   -- print . parse $ testInput
   -- plot . parse $ testInput
+  -- plot . removeCrashed . step . removeCrashed . step . removeCrashed . step . parse $ testInput2
   -- plot . stepN 1 . parse $ testInput
   -- plot . stepN 2 . parse $ testInput
   -- plot . stepN 3 . parse $ testInput
@@ -162,7 +184,8 @@ main = do
   -- plot . stepN 22 . parse $ testInput
   -- plot . stepN 23 . parse $ testInput
   -- plot . stepN 24 . parse $ testInput
-  -- plot . stepN 34 . parse $ testInput
-  -- plot . stepUntil . parse $ input
+  plot . stepN 322 . parse $ input
+  -- plot . stepUntil . parse $ testInput
+  -- plot . stepUntilLast . parse $ input
   -- plot . stepN 165 . parse $ input
   -- plot . stepN 1 . parse $ input
