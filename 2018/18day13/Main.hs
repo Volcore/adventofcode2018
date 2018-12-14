@@ -58,10 +58,16 @@ stepUntil (map, carts)
   | null . filter (\(Cart _ _ d _) -> d == 4) $ carts = stepUntil . step $ (map, carts)
   | otherwise = (map, carts)
 
+stepUntilLast :: MapState -> MapState
+stepUntilLast (map, carts)
+  | (length . filter (\(Cart _ _ d _) -> d /= 4) $ carts) > 1 = stepUntilLast . step $ (map, carts)
+  | otherwise = (map, carts)
+
 step :: MapState -> MapState
-step (map, carts) = (map, foldl (up) [] (sort $ carts))
+step (map, allcarts) = (map, foldl (up) [] sorted)
   where
-    up carts cart = carts ++ [collide carts . turn . move $ cart]
+    sorted = sort $ allcarts
+    up carts cart = carts ++ [collide (carts ++ drop (length carts + 1) sorted) . turn . move $ cart]
     collide carts (Cart x y d t)
       | null . filter (\(Cart x' y' _ _) -> x' == x && y' == y) $ carts = (Cart x y d t)
       | otherwise = (Cart x y 4 t)
@@ -94,6 +100,14 @@ solveA = (\(Cart x y _ _) -> (x, y))
         . stepUntil
         . parse
 
+solveB :: String -> (Int, Int)
+solveB = (\(Cart x y _ _) -> (x, y)) 
+        . head
+        . filter (\(Cart _ _ d _) -> d /= 4)
+        . snd
+        . stepUntilLast
+        . parse
+
 plot :: MapState -> IO ()
 plot (map, carts) = do
   let m = foldl (put) map $ carts
@@ -121,33 +135,34 @@ main = do
   putStrLn "Solution for A:"
   print . solveA $ input
   putStrLn "Solution for B:"
-  -- print . solveB $ input
+  print . solveB $ input
   -- putStrLn $ testInput
   -- print . parse $ testInput
   -- plot . parse $ testInput
-  plot . stepN 1 . parse $ testInput
-  plot . stepN 2 . parse $ testInput
-  plot . stepN 3 . parse $ testInput
-  plot . stepN 4 . parse $ testInput
-  plot . stepN 5 . parse $ testInput
-  plot . stepN 6 . parse $ testInput
-  plot . stepN 7 . parse $ testInput
-  plot . stepN 8 . parse $ testInput
-  plot . stepN 9 . parse $ testInput
-  plot . stepN 10 . parse $ testInput
-  plot . stepN 11 . parse $ testInput
-  plot . stepN 12 . parse $ testInput
-  plot . stepN 13 . parse $ testInput
-  plot . stepN 14 . parse $ testInput
-  plot . stepN 15 . parse $ testInput
-  plot . stepN 16 . parse $ testInput
-  plot . stepN 17 . parse $ testInput
-  plot . stepN 19 . parse $ testInput
-  plot . stepN 20 . parse $ testInput
-  plot . stepN 21 . parse $ testInput
-  plot . stepN 22 . parse $ testInput
-  plot . stepN 23 . parse $ testInput
-  plot . stepN 24 . parse $ testInput
-  plot . stepN 34 . parse $ testInput
+  -- plot . stepN 1 . parse $ testInput
+  -- plot . stepN 2 . parse $ testInput
+  -- plot . stepN 3 . parse $ testInput
+  -- plot . stepN 4 . parse $ testInput
+  -- plot . stepN 5 . parse $ testInput
+  -- plot . stepN 6 . parse $ testInput
+  -- plot . stepN 7 . parse $ testInput
+  -- plot . stepN 8 . parse $ testInput
+  -- plot . stepN 9 . parse $ testInput
+  -- plot . stepN 10 . parse $ testInput
+  -- plot . stepN 11 . parse $ testInput
+  -- plot . stepN 12 . parse $ testInput
+  -- plot . stepN 13 . parse $ testInput
+  -- plot . stepN 14 . parse $ testInput
+  -- plot . stepN 15 . parse $ testInput
+  -- plot . stepN 16 . parse $ testInput
+  -- plot . stepN 17 . parse $ testInput
+  -- plot . stepN 19 . parse $ testInput
+  -- plot . stepN 20 . parse $ testInput
+  -- plot . stepN 21 . parse $ testInput
+  -- plot . stepN 22 . parse $ testInput
+  -- plot . stepN 23 . parse $ testInput
+  -- plot . stepN 24 . parse $ testInput
+  -- plot . stepN 34 . parse $ testInput
   -- plot . stepUntil . parse $ input
-
+  -- plot . stepN 165 . parse $ input
+  -- plot . stepN 1 . parse $ input
