@@ -3,6 +3,7 @@ module Main where
 import Test.HUnit
 import Debug.Trace
 import qualified Data.Sequence as Seq
+import Data.Foldable (toList)
 
 --------------------------------------------------------------------------------
 -- Day specific part. This is where the implementation happens
@@ -15,6 +16,9 @@ tests = TestList [
   addTest solveA 2018 "5941429882"
   -- addTest solveB testInput2 (6,4)
   ]
+
+initializer :: (Seq.Seq Int, [Int])
+initializer = (Seq.fromList [3, 7], [0, 1])
   
 digits :: Int -> [Int]
 digits = map (read . (:[])) . show
@@ -22,19 +26,19 @@ digits = map (read . (:[])) . show
 run :: (Seq.Seq Int, [Int]) -> (Seq.Seq Int, [Int])
 run (rs,es) = 
   let
-    r i = rs!!(es!!i)
-    newRs = rs >< digits (r 0 + r 1)
+    r i = rs `Seq.index` (es!!i)
+    newRs = rs Seq.>< Seq.fromList (digits (r 0 + r 1))
     lenRs = length newRs
     newEs = [(r 0 + es!!0 + 1) `mod` lenRs, (r 1 + es!!1 + 1) `mod` lenRs]
   in (newRs, newEs)
 
-runN :: Int -> ([Int], [Int]) -> ([Int], [Int])
+runN :: Int -> (Seq.Seq Int, [Int]) -> (Seq.Seq Int, [Int])
 runN n (rs, es)
   | length rs >= n + 10 = (rs, es)
-  | otherwise = trace (show $ length rs) runN n $ run (rs, es)
+  | otherwise = runN n $ run (rs, es)
 
 solveA :: Int -> String
-solveA n = map (\x -> toEnum (fromEnum '0' + x)) . take 10 . drop n . fst . runN n $ ([3, 7], [0, 1])
+solveA n = map (\x -> toEnum (fromEnum '0' + x)) . take 10 . drop n . toList . fst . runN n $ initializer
 
 --------------------------------------------------------------------------------
 -- Day-agnostic part. Is the same every day of AoC
