@@ -19,11 +19,11 @@ tests = TestList [
 digits :: Int -> [Int]
 digits = map (read . (:[])) . show
 
-run :: ([Int], [Int]) -> ([Int], [Int])
+run :: (Seq.Seq Int, [Int]) -> (Seq.Seq Int, [Int])
 run (rs,es) = 
   let
     r i = rs!!(es!!i)
-    newRs = rs ++ digits (r 0 + r 1)
+    newRs = rs >< digits (r 0 + r 1)
     lenRs = length newRs
     newEs = [(r 0 + es!!0 + 1) `mod` lenRs, (r 1 + es!!1 + 1) `mod` lenRs]
   in (newRs, newEs)
