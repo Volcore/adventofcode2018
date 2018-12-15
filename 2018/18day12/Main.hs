@@ -70,10 +70,20 @@ step state = (State newMap rules newLeft)
     up idx m = (match idx) : m
     match idx = matchPattern rules (take 5 . drop (idx-2) $ padMap)
 
+-- Removes all excess empty cells from the left and right
+trimState :: State -> State
+trimState (State m r l) = (State newMap r newLeft)
+  where
+    newLeft = l + length m - length (trim m)
+    newMap = reverse . trim . reverse . trim $ m
+    trim (x:xs)
+      | x == '.' = trim xs
+      | otherwise = x : xs
+
 -- Call the step function n times
 stepN :: Int -> State -> State
 stepN 0 state = state
-stepN n state = stepN (n-1) . step $ state
+stepN n state = stepN (n-1) . trimState . step $ state
 
 -- Parse the input
 parse :: String -> State
@@ -89,6 +99,15 @@ parse input = (State initial rules 0)
 -- Solving function for part A
 solveA :: String -> Int
 solveA = score . stepN 20 . parse
+
+-- Solving function for part B. I noticed it goes into a linear increment at
+-- some point, of 51 points per iteration, so that's a shortcut. Probably wont
+-- work for everyone's input
+solveB :: String -> Int
+solveB = (+) (51 * (50000000000 - 1000)) 
+       . score
+       . stepN 1000
+       . parse
 
 --------------------------------------------------------------------------------
 -- Day-agnostic part. Is the same every day of AoC
@@ -106,8 +125,8 @@ main = do
   input <- readFile "input.txt"
   putStrLn "Solution for A:"
   print . solveA $ input
-  -- putStrLn "Solution for B:"
-  -- print . solveB $ input
+  putStrLn "Solution for B:"
+  print . solveB $ input
   -- putStrLn ""
   -- print . step . step . parse $ testInput
   -- print . stepN 20 . parse $ testInput
