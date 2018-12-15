@@ -95,16 +95,72 @@ parse s = (Game units m)
       | otherwise = True
 
 step :: Game -> Game
-step (Game us m) = (Game us' m)
+step (Game us m) = foldl (update) (Game (sort us) m) [0..length us-1]
   where
-    inputUs = sort us
-    us' = foldl (up) [] [0..length us-1]
-    up newus idx = newus ++ [move (inputUs!!idx)]
+    update game idx = attack idx . move idx $ game
+
+move :: Int -> Game -> Game
+move idx game = game
+
+targetList :: Int -> Game -> [(Int, Int)]
+targetList i (Game us m) = sort $ foldl (find) [] [0..length us-1]
+  where
+    (Unit x y t h) = us!!i
+    -- Find all units in range
+    find ts j 
+      | t == (unitType (us!!j)) = ts
+      | (unitHealth (us!!j)) <= 0 = ts
+      | otherwise = ts ++ targetsForUnit (us!!j)
+    -- Create a list of target locations for a unit
+    targetsForUnit (Unit y' x' _ _) = filter (validCoord)
+                                    $ [(y',x'-1),(y',x'+1),(y'-1,x'),(y'+1,x')]
+    -- Check if a coordinate is valid
+    validCoord (y',x')
+      | x'==x && y'==y = True
+      | m!!y'!!x' == '#' = False
+      | null $ filter (\(Unit y'' x'' _ _)->x'==x''&&y'==y'') us = True
+      | otherwise = False
+
+canWalk :: Game -> (Int, Int) -> Bool
+canWalk (Game us m) (y,x)
+  | m!!y!!x == '#' = False
+  | null $ filter (\(Unit y' x' _ _)->x'==x&&y'==y) us = True
+  | otherwise = False
+
+computeDistanceField :: Game -> (Int, Int) -> [[Int]]
+computeDistanceField (Game us m) (y,x) = final
+  where
+    empty = replicate (length m) (replicate (length (m!!0)) (-1))
+    initial = replaceAt2 empty y x 0
+    final = update initial [(0,y,x)]
+    update ds [] = ds
+    update ds ((_,y',x'):xs) = update ds' (sort xs')
       where
-        others = newus ++ take (idx+1) inputUs
-        move (Unit y x t h) = range . targets $ t 
-        targets t = filter (\(Unit _ _ t' _) -> t /= t') others
-        range ts = map (\(Unit x y _ _)->[(x-1,y),(x+1,y),(x,y-1),(x,y+1)]) $ ts
+        d = ds!!y'!!x'
+        (xs', ds') = check (y'+1,x')
+                   . check (y'-1,x')
+                   . check (y',x'+1)
+                   . check (y',x'-1) $ (xs, ds)
+        check (y'',x'') (xs'', ds'')
+          | not (canWalk (Game us m) (y'',x'')) = (xs'', ds'')
+          | ds''!!y''!!x'' == -1 || ds''!!y''!!x'' > d+1 = ((d+1,y'',x''): xs'', replaceAt2 ds'' y'' x'' (d+1))
+          | otherwise = (xs'', ds'')
+
+reachable :: [[Int]] -> (Int,Int) -> Bool
+reachable ds (y,x) = ds!!y!!x > -1
+
+attack :: Int -> Game -> Game
+attack idx game = game
+  -- where
+  --   inputUs = sort us
+  --   us' = foldl (up) [] [0..length us-1]
+  --   up newus idx = newus ++ [move (inputUs!!idx)]
+  --     where
+  --       others = newus ++ take (idx+1) inputUs
+  --       move (Unit y x t h) = range . targets $ t 
+  --       targets t = filter (\(Unit _ _ t' _) -> t /= t') others
+  --       range ts = filter ()
+  --                . map (\(Unit x y _ _)->[(x-1,y),(x+1,y),(x,y-1),(x,y+1)]) $ ts
 
 solveA :: String -> Int
 solveA s = 0
@@ -124,8 +180,11 @@ plot (Game us m) = do
       | y' == y = ul ++ [t : "(" ++ show h ++ ")"]
       | otherwise = ul
 
-replaceAt :: String -> Int -> Char -> String
+replaceAt :: [a] -> Int -> a -> [a]
 replaceAt s idx t = take idx s ++ [t] ++ drop (idx+1) s
+
+replaceAt2 :: [[a]] -> Int -> Int -> a -> [[a]]
+replaceAt2 s y x t = replaceAt s y (replaceAt (s!!y) x t)
 
 --------------------------------------------------------------------------------
 -- Day-agnostic part. Is the same every day of AoC
@@ -144,11 +203,12 @@ main = do
   putStrLn "Solution for A:"
   -- print . solveA $ 306281
   putStrLn "Solution for B:"
-  plot . parse $ testInput1
-  plot ((iterate step . parse $ testInput1) !! 1)
-  plot ((iterate step . parse $ testInput1) !! 2)
-  plot ((iterate step . parse $ testInput1) !! 3)
+  let game = parse $ testInput5
+  plot $ game
+  -- plot ((iterate step . parse $ testInput1) !! 1)
+  -- plot ((iterate step . parse $ testInput1) !! 2)
+  -- plot ((iterate step . parse $ testInput1) !! 3)
+  print . targetList 0 $ game
+  print . filter (reachable (computeDistanceField game (1,2))) . targetList 0 $ game
+  print . computeDistanceField game $ (1,2)
 
-  -- let rawMap = lines $ testInput1
-  -- let mapCoords = concat . map (\(row,y) -> map (\(c,x) -> (c,(x,y))) $ zip row [0..]) . zip rawMap $ [0..]
-  -- print $ mapCoords
