@@ -100,7 +100,7 @@ step (Game us m r) = foldl (update) (Game sorted m (r+1)) [0..length us-1]
   where
     sorted = sort us
     update game idx
-      | unitHealth (sorted!!idx) > 0 = attack idx $ move idx $ game
+      | unitHealth ((gameUnits game)!!idx) > 0 = attack idx $ move idx $ game
       | otherwise = game
 
 stepUntilVictory :: Game -> Game
@@ -225,7 +225,7 @@ attackList i (Game us m r) = sort $ foldl (find) [] [0..length us-1]
         (Unit y' x' t' h') = us!!j
 
 score :: Game -> Int
-score (Game us m r) = r * foldl (score') 0 us
+score (Game us m r) = (r-1) * foldl (score') 0 us
   where
     score' s (Unit y x t h)
       | h < 0 = s
@@ -274,28 +274,24 @@ main = do
   putStrLn "Solution for A:"
   -- print . solveA $ input
   putStrLn "Solution for B:"
-  let game = parse $ testInput2
-  plot $ game
-  plot ((iterate step $ game) !! 1)
-  plot ((iterate step $ game) !! 2)
-  plot ((iterate step $ game) !! 3)
-  plot ((iterate step $ game) !! 4)
-  plot ((iterate step $ game) !! 5)
+  -- let game = parse $ testInput2
+  -- plot $ game
+  -- plot ((iterate step $ game) !! 1)
+  -- plot ((iterate step $ game) !! 2)
+  -- plot ((iterate step $ game) !! 3)
+  -- plot ((iterate step $ game) !! 4)
+  -- plot ((iterate step $ game) !! 32)
+  -- plot ((iterate step $ game) !! 33)
+  -- plot ((iterate step $ game) !! 34)
+  -- plot ((iterate step $ game) !! 35)
+  -- plot ((iterate step $ game) !! 36)
+  -- plot ((iterate step $ game) !! 37)
+  -- plot ((iterate step $ game) !! 38)
   -- plot ((iterate step $ game) !! 23)
   -- plot ((iterate step $ game) !! 24)
-  plot ((iterate step $ game) !! 38)
-
-  -- plot . stepUntilVictory $ game
-  -- print . computeDistanceField ((iterate step $ game) !! 25) $ (2,4)
-  -- let ds = computeDistanceField game $ (1,2)
-  -- print . targetList 1 $ ((iterate step $ game) !! 35)
-  -- print . attackList 5 $ game
-  -- print . filter (reachable (computeDistanceField game (1,2))) . targetList 0 $ game
-  -- print . head . sort . filter (\(d,_,_)->d>=0) . map (\(y,x)->(ds!!y!!x,y,x)) . targetList 0 $ game
-  -- let tds = computeDistanceField game $ (1,5)
-  -- print 
-  -- print $ ds
+  -- plot ((iterate step $ game) !! 38)
 
 -- 220818 not right (mine)
--- 221208 
+-- 221754 right solution for A (off by one on first unit test, though)
+-- 221208 not right (reddit)
 -- 224597 too high (reddit)
