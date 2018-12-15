@@ -100,7 +100,7 @@ step (Game us m r) = foldl (update) (Game sorted m (r+1)) [0..length us-1]
   where
     sorted = sort us
     update game idx
-      | unitHealth (sorted!!idx) > 0 = attack idx . move idx $ game
+      | unitHealth (sorted!!idx) > 0 = attack idx $ move idx $ game
       | otherwise = game
 
 stepUntilVictory :: Game -> Game
@@ -146,8 +146,11 @@ targetList i (Game us m r) = sort $ foldl (find) [] [0..length us-1]
     (Unit y x t h) = us!!i
     -- Find all units in range
     find ts j 
+      -- ignore units of the same type
       | t == (unitType (us!!j)) = ts
+      -- ignore dead units
       | (unitHealth (us!!j)) <= 0 = ts
+      -- add all remaining units
       | otherwise = ts ++ targetsForUnit (us!!j)
     -- Create a list of target locations for a unit
     targetsForUnit (Unit y' x' _ _) = filter (validCoord)
@@ -160,7 +163,7 @@ targetList i (Game us m r) = sort $ foldl (find) [] [0..length us-1]
       -- walls are not valid
       | m!!y'!!x' == '#' = False
       -- blocked by another alive unit means invalid
-      | not . null $ filter (\(Unit y'' x'' _ h'')->x'==x''&&y'==y'') us = False
+      | not . null $ filter (\(Unit y'' x'' _ h'')->x'==x''&&y'==y''&&h''>0) us = False
       -- otherwise it's valid
       | otherwise = True
 
@@ -211,7 +214,9 @@ attackList i (Game us m r) = sort $ foldl (find) [] [0..length us-1]
     (Unit y x t h) = us!!i
     -- Find all enemy units in range
     find ts j
+      -- no attacks if type of the target is the same as the attacker
       | t == t' = ts
+      -- no attack against dead units
       | h' <= 0 = ts
       | abs (y' - y) <= 1 && x' == x = ts ++ [(h',j)]
       | abs (x' - x) <= 1 && y' == y = ts ++ [(h',j)]
@@ -267,20 +272,23 @@ main = do
   tt <- runTestTT tests
   input <- readFile "input.txt"
   putStrLn "Solution for A:"
-  -- print . solveA $ 306281
+  -- print . solveA $ input
   putStrLn "Solution for B:"
   let game = parse $ testInput2
-  -- plot $ game
-  -- plot ((iterate step $ game) !! 1)
-  -- plot ((iterate step $ game) !! 2)
+  plot $ game
+  plot ((iterate step $ game) !! 1)
+  plot ((iterate step $ game) !! 2)
+  plot ((iterate step $ game) !! 3)
+  plot ((iterate step $ game) !! 4)
+  plot ((iterate step $ game) !! 5)
   -- plot ((iterate step $ game) !! 23)
   -- plot ((iterate step $ game) !! 24)
-  plot ((iterate step $ game) !! 35)
+  plot ((iterate step $ game) !! 38)
 
   -- plot . stepUntilVictory $ game
   -- print . computeDistanceField ((iterate step $ game) !! 25) $ (2,4)
   -- let ds = computeDistanceField game $ (1,2)
-  print . targetList 1 $ ((iterate step $ game) !! 35)
+  -- print . targetList 1 $ ((iterate step $ game) !! 35)
   -- print . attackList 5 $ game
   -- print . filter (reachable (computeDistanceField game (1,2))) . targetList 0 $ game
   -- print . head . sort . filter (\(d,_,_)->d>=0) . map (\(y,x)->(ds!!y!!x,y,x)) . targetList 0 $ game
@@ -288,3 +296,6 @@ main = do
   -- print 
   -- print $ ds
 
+-- 220818 not right (mine)
+-- 221208 
+-- 224597 too high (reddit)
