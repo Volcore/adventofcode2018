@@ -60,12 +60,12 @@ testInput6 = "#########\n\
 
              
 tests = TestList [
-  -- addTest solveA testInput1 27730,
-  -- addTest solveA testInput2 36334,
-  -- addTest solveA testInput3 39514,
-  -- addTest solveA testInput4 27755,
-  -- addTest solveA testInput5 28944,
-  -- addTest solveA testInput6 18740,
+  addTest solveA testInput1 27730,
+  addTest solveA testInput2 36334,
+  addTest solveA testInput3 39514,
+  addTest solveA testInput4 27755,
+  addTest solveA testInput5 28944,
+  addTest solveA testInput6 18740
   ]
 
 data Unit = Unit {
@@ -77,11 +77,12 @@ data Unit = Unit {
 
 data Game = Game {
     gameUnits :: [Unit],
-    gameMap :: [[Char]]
+    gameMap :: [[Char]],
+    gameRounds :: Int
   } deriving (Show, Eq, Ord)
 
 parse :: String -> Game
-parse s = (Game units m)
+parse s = (Game units m 0)
   where
     rawMap = lines $ s
     mapCoords = concat . map (\(row,y) -> map (\(c,x) -> (c,(x,y))) $ zip row [0..]) . zip rawMap $ [0..]
@@ -95,20 +96,26 @@ parse s = (Game units m)
       | otherwise = True
 
 step :: Game -> Game
-step (Game us m) = foldl (update) (Game (sort us) m) [0..length us-1]
+step (Game us m r) = foldl (update) (Game sorted m (r+1)) [0..length us-1]
   where
+    sorted = sort us
     update game idx
-      | unitHealth (us!!idx) > 0 = attack idx . move idx $ game
+      | unitHealth (sorted!!idx) > 0 = attack idx . move idx $ game
       | otherwise = game
+
+stepUntilVictory :: Game -> Game
+stepUntilVictory (Game us m r)
+  | null . filter (\(Unit y x t h) -> t=='E' && h>0) $ us = (Game us m r)
+  | null . filter (\(Unit y x t h) -> t=='G' && h>0) $ us = (Game us m r)
+  | otherwise = stepUntilVictory . step $ (Game us m r)
 
 move :: Int -> Game -> Game
 move idx game = game'
   where
+    r = gameRounds game
     us = gameUnits game
     m = gameMap game
-    self = us!!idx
-    y = unitY self
-    x = unitX self
+    (Unit y x t h) = us!!idx
     ds = computeDistanceField game (y,x)
     -- compute target list
     tlist = sort . filter (\(d,_,_)->d>=0)
@@ -120,7 +127,7 @@ move idx game = game'
       -- don't move if target is where i already am
       | not . null . filter (\(_,y',x')->y'==y&&x'==x) $ tlist = game
       -- otherwise move towards target
-      | otherwise = (Game us' m)
+      | otherwise = (Game us' m r)
         where
           -- compute the distance field twoards the target
           mds = computeDistanceField game (ty,tx)
@@ -131,10 +138,10 @@ move idx game = game'
           -- compute the target
           (_,mty,mtx) = head $ mlist
           -- compute updated unit list
-          us' = replaceAt us idx (Unit mty mtx (unitType self) (unitHealth self))
+          us' = replaceAt us idx (Unit mty mtx t h)
 
 targetList :: Int -> Game -> [(Int, Int)]
-targetList i (Game us m) = sort $ foldl (find) [] [0..length us-1]
+targetList i (Game us m r) = sort $ foldl (find) [] [0..length us-1]
   where
     (Unit y x t h) = us!!i
     -- Find all units in range
@@ -147,19 +154,24 @@ targetList i (Game us m) = sort $ foldl (find) [] [0..length us-1]
                                     $ [(y',x'-1),(y',x'+1),(y'-1,x'),(y'+1,x')]
     -- Check if a coordinate is valid
     validCoord (y',x')
+      -- | trace (show i ++ " " ++ show y' ++ " " ++ show x') False = undefined
+      -- current position is always valid
       | x'==x && y'==y = True
+      -- walls are not valid
       | m!!y'!!x' == '#' = False
-      | null $ filter (\(Unit y'' x'' _ _)->x'==x''&&y'==y'') us = True
-      | otherwise = False
+      -- blocked by another alive unit means invalid
+      | not . null $ filter (\(Unit y'' x'' _ h'')->x'==x''&&y'==y'') us = False
+      -- otherwise it's valid
+      | otherwise = True
 
 canWalk :: Game -> (Int, Int) -> Bool
-canWalk (Game us m) (y,x)
+canWalk (Game us m r) (y,x)
   | m!!y!!x == '#' = False
   | null $ filter (\(Unit y' x' _ h')->h'>0&&x'==x&&y'==y) us = True
   | otherwise = False
 
 computeDistanceField :: Game -> (Int, Int) -> [[Int]]
-computeDistanceField (Game us m) (y,x) = final
+computeDistanceField (Game us m r) (y,x) = final
   where
     empty = replicate (length m) (replicate (length (m!!0)) (-1))
     initial = replaceAt2 empty y x 0
@@ -173,7 +185,7 @@ computeDistanceField (Game us m) (y,x) = final
                    . check (y',x'+1)
                    . check (y',x'-1) $ (xs, ds)
         check (y'',x'') (xs'', ds'')
-          | not (canWalk (Game us m) (y'',x'')) = (xs'', ds'')
+          | not (canWalk (Game us m r) (y'',x'')) = (xs'', ds'')
           | ds''!!y''!!x'' == -1 || ds''!!y''!!x'' > d+1 = ((d+1,y'',x''): xs'', replaceAt2 ds'' y'' x'' (d+1))
           | otherwise = (xs'', ds'')
 
@@ -181,8 +193,9 @@ reachable :: [[Int]] -> (Int,Int) -> Bool
 reachable ds (y,x) = ds!!y!!x > -1
 
 attack :: Int -> Game -> Game
-attack i game = (Game us' m)
+attack i game = (Game us' m r)
   where
+    r = gameRounds game
     m = gameMap game
     us = gameUnits game
     alist = attackList i game
@@ -193,7 +206,7 @@ attack i game = (Game us' m)
       | otherwise = replaceAt us j (Unit y' x' t' (h'-3))
 
 attackList :: Int -> Game -> [(Int, Int)]
-attackList i (Game us m) = sort $ foldl (find) [] [0..length us-1]
+attackList i (Game us m r) = sort $ foldl (find) [] [0..length us-1]
   where
     (Unit y x t h) = us!!i
     -- Find all enemy units in range
@@ -206,14 +219,18 @@ attackList i (Game us m) = sort $ foldl (find) [] [0..length us-1]
       where
         (Unit y' x' t' h') = us!!j
 
-    -- Create a list of target locations for a unit
-
+score :: Game -> Int
+score (Game us m r) = r * foldl (score') 0 us
+  where
+    score' s (Unit y x t h)
+      | h < 0 = s
+      | otherwise = s + h
 
 solveA :: String -> Int
-solveA s = 0
+solveA = score . stepUntilVictory . parse 
 
 plot :: Game -> IO()
-plot (Game us m) = do
+plot (Game us m r) = do
   putStrLn result
   where
     result = foldl (add) "" [0..length m-1]
@@ -252,15 +269,18 @@ main = do
   putStrLn "Solution for A:"
   -- print . solveA $ 306281
   putStrLn "Solution for B:"
-  let game = parse $ testInput1
-  plot $ game
-  plot ((iterate step $ game) !! 1)
-  plot ((iterate step $ game) !! 2)
-  plot ((iterate step $ game) !! 23)
-  plot ((iterate step $ game) !! 24)
-  plot ((iterate step $ game) !! 25)
+  let game = parse $ testInput2
+  -- plot $ game
+  -- plot ((iterate step $ game) !! 1)
+  -- plot ((iterate step $ game) !! 2)
+  -- plot ((iterate step $ game) !! 23)
+  -- plot ((iterate step $ game) !! 24)
+  plot ((iterate step $ game) !! 35)
+
+  -- plot . stepUntilVictory $ game
+  -- print . computeDistanceField ((iterate step $ game) !! 25) $ (2,4)
   -- let ds = computeDistanceField game $ (1,2)
-  -- print . targetList 1 $ game
+  print . targetList 1 $ ((iterate step $ game) !! 35)
   -- print . attackList 5 $ game
   -- print . filter (reachable (computeDistanceField game (1,2))) . targetList 0 $ game
   -- print . head . sort . filter (\(d,_,_)->d>=0) . map (\(y,x)->(ds!!y!!x,y,x)) . targetList 0 $ game
