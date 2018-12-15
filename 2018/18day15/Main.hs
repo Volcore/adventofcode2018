@@ -67,9 +67,11 @@ tests = TestList [
   addTest solveA testInput5 28944,
   addTest solveA testInput6 18740,
 
+  addTest solveB testInput1 4988,
   addTest solveB testInput3 31284,
   addTest solveB testInput4 3478,
-  addTest solveB testInput5 6474
+  addTest solveB testInput5 6474,
+  addTest solveB testInput6 1140
   ]
 
 data Unit = Unit {
@@ -82,14 +84,16 @@ data Unit = Unit {
 data Game = Game {
     gameUnits :: [Unit],
     gameMap :: [[Char]],
-    gameRounds :: Int
+    gameRounds :: Int,
+    gameOver :: Bool
   } deriving (Show, Eq, Ord)
 
 parse :: String -> Game
-parse s = (Game units m 0)
+parse s = (Game units m 0 False)
   where
     rawMap = lines $ s
-    mapCoords = concat . map (\(row,y) -> map (\(c,x) -> (c,(x,y))) $ zip row [0..]) . zip rawMap $ [0..]
+    mapCoords = concat . map (\(row,y) -> map (\(c,x) -> (c,(x,y)))
+              $ zip row [0..]) . zip rawMap $ [0..]
     units = foldl (getUnit) [] $ mapCoords
     getUnit us (c, (x,y))
       | isUnit c = us ++ [(Unit y x c 200)]
@@ -99,26 +103,32 @@ parse s = (Game units m 0)
       | x == '.' || x == '#' = False
       | otherwise = True
 
+hasEnemies :: Game -> Char -> Bool
+hasEnemies game t = not . null . filter (\(Unit y x t' h) -> t'==t && h>0)
+                  $ gameUnits game
+
 step :: Int -> Game -> Game
-step ap (Game us m r) = foldl (update) (Game sorted m (r+1), True) [0..length us-1]
+step ap (Game us m r over) = foldl (update) (Game sorted m (r+1) over) [0..length us-1]
   where
     sorted = sort us
     update game idx
-      | unitHealth ((gameUnits game)!!idx) > 0 = attack ap idx $ move idx $ game
-      | otherwise = game
+      | h <= 0 = game
+      | not $ hasEnemies game enemyType = game { gameOver = True }
+      | otherwise = attack ap idx $ move idx $ game
+        where 
+          us' = (gameUnits game)
+          (Unit y x t h) = us'!!idx
+          enemyType = if (t == 'E') then 'G' else 'E'
 
 stepUntilVictory :: Int -> Game -> Game
-stepUntilVictory ap (Game us m r)
-  | null . filter (\(Unit y x t h) -> t=='E' && h>0) $ us = (Game us m r)
-  | null . filter (\(Unit y x t h) -> t=='G' && h>0) $ us = (Game us m r)
-  | otherwise = stepUntilVictory ap . step ap $ (Game us m r)
+stepUntilVictory ap game
+  | gameOver game = game
+  | otherwise = stepUntilVictory ap . step ap $ game
 
 move :: Int -> Game -> Game
 move idx game = game'
   where
-    r = gameRounds game
     us = gameUnits game
-    m = gameMap game
     (Unit y x t h) = us!!idx
     ds = computeDistanceField game (y,x)
     -- compute target list
@@ -131,7 +141,7 @@ move idx game = game'
       -- don't move if target is where i already am
       | not . null . filter (\(_,y',x')->y'==y&&x'==x) $ tlist = game
       -- otherwise move towards target
-      | otherwise = (Game us' m r)
+      | otherwise = game { gameUnits = us' }
         where
           -- compute the distance field twoards the target
           mds = computeDistanceField game (ty,tx)
@@ -145,7 +155,7 @@ move idx game = game'
           us' = replaceAt us idx (Unit mty mtx t h)
 
 targetList :: Int -> Game -> [(Int, Int)]
-targetList i (Game us m r) = sort $ foldl (find) [] [0..length us-1]
+targetList i (Game us m r o) = sort $ foldl (find) [] [0..length us-1]
   where
     (Unit y x t h) = us!!i
     -- Find all units in range
@@ -172,14 +182,15 @@ targetList i (Game us m r) = sort $ foldl (find) [] [0..length us-1]
       | otherwise = True
 
 canWalk :: Game -> (Int, Int) -> Bool
-canWalk (Game us m r) (y,x)
+canWalk (Game us m r o) (y,x)
   | m!!y!!x == '#' = False
   | null $ filter (\(Unit y' x' _ h')->h'>0&&x'==x&&y'==y) us = True
   | otherwise = False
 
 computeDistanceField :: Game -> (Int, Int) -> [[Int]]
-computeDistanceField (Game us m r) (y,x) = final
+computeDistanceField game (y,x) = final
   where
+    m = gameMap game
     empty = replicate (length m) (replicate (length (m!!0)) (-1))
     initial = replaceAt2 empty y x 0
     final = update initial [(0,y,x)]
@@ -192,7 +203,7 @@ computeDistanceField (Game us m r) (y,x) = final
                    . check (y',x'+1)
                    . check (y',x'-1) $ (xs, ds)
         check (y'',x'') (xs'', ds'')
-          | not (canWalk (Game us m r) (y'',x'')) = (xs'', ds'')
+          | not (canWalk game (y'',x'')) = (xs'', ds'')
           | ds''!!y''!!x'' == -1 || ds''!!y''!!x'' > d+1 = ((d+1,y'',x''): xs'', replaceAt2 ds'' y'' x'' (d+1))
           | otherwise = (xs'', ds'')
 
@@ -200,10 +211,8 @@ reachable :: [[Int]] -> (Int,Int) -> Bool
 reachable ds (y,x) = ds!!y!!x > -1
 
 attack :: Int -> Int -> Game -> Game
-attack ap i game = (Game us' m r)
+attack ap i game = game { gameUnits = us' }
   where
-    r = gameRounds game
-    m = gameMap game
     us = gameUnits game
     (Unit _ _ t _) = us!!i
     ap' = if (t=='E') then ap else 3
@@ -215,7 +224,7 @@ attack ap i game = (Game us' m r)
       | otherwise = replaceAt us j (Unit y' x' t' (h'-ap'))
 
 attackList :: Int -> Game -> [(Int, Int)]
-attackList i (Game us m r) = sort $ foldl (find) [] [0..length us-1]
+attackList i (Game us m r o) = sort $ foldl (find) [] [0..length us-1]
   where
     (Unit y x t h) = us!!i
     -- Find all enemy units in range
@@ -231,7 +240,7 @@ attackList i (Game us m r) = sort $ foldl (find) [] [0..length us-1]
         (Unit y' x' t' h') = us!!j
 
 score :: Game -> Int
-score (Game us m r) = (r-1) * foldl (score') 0 us
+score (Game us m r o) = (r-1) * foldl (score') 0 us
   where
     score' s (Unit y x t h)
       | h < 0 = s
@@ -256,7 +265,7 @@ solveB input = find [3..]
     
 
 plot :: Game -> IO()
-plot (Game us m r) = do
+plot (Game us m r o) = do
   putStrLn result
   where
     result = foldl (add) "" [0..length m-1]
@@ -293,8 +302,9 @@ main = do
   tt <- runTestTT tests
   input <- readFile "input.txt"
   putStrLn "Solution for A:"
-  -- print . solveA $ input
+  print . solveA $ input
   putStrLn "Solution for B:"
+  print . solveB $ input
   -- let game = parse $ testInput2
   -- plot $ game
   -- plot ((iterate step $ game) !! 1)
@@ -312,7 +322,7 @@ main = do
   -- plot ((iterate step $ game) !! 24)
   -- plot ((iterate step $ game) !! 38)
 
--- 220818 not right (mine)
--- 221754 right solution for A (off by one on first unit test, though)
--- 221208 not right (reddit)
--- 224597 too high (reddit)
+-- B 42224 too high
+-- B 38922 too low
+-- B 41972 was the right one (using the C solution from reddit). All unit
+--    tests are passing, and no idea why it's not working.
