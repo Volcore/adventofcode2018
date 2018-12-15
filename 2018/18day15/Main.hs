@@ -65,7 +65,11 @@ tests = TestList [
   addTest solveA testInput3 39514,
   addTest solveA testInput4 27755,
   addTest solveA testInput5 28944,
-  addTest solveA testInput6 18740
+  addTest solveA testInput6 18740,
+
+  addTest solveB testInput3 31284,
+  addTest solveB testInput4 3478,
+  addTest solveB testInput5 6474
   ]
 
 data Unit = Unit {
@@ -95,19 +99,19 @@ parse s = (Game units m 0)
       | x == '.' || x == '#' = False
       | otherwise = True
 
-step :: Game -> Game
-step (Game us m r) = foldl (update) (Game sorted m (r+1)) [0..length us-1]
+step :: Int -> Game -> Game
+step ap (Game us m r) = foldl (update) (Game sorted m (r+1), True) [0..length us-1]
   where
     sorted = sort us
     update game idx
-      | unitHealth ((gameUnits game)!!idx) > 0 = attack idx $ move idx $ game
+      | unitHealth ((gameUnits game)!!idx) > 0 = attack ap idx $ move idx $ game
       | otherwise = game
 
-stepUntilVictory :: Game -> Game
-stepUntilVictory (Game us m r)
+stepUntilVictory :: Int -> Game -> Game
+stepUntilVictory ap (Game us m r)
   | null . filter (\(Unit y x t h) -> t=='E' && h>0) $ us = (Game us m r)
   | null . filter (\(Unit y x t h) -> t=='G' && h>0) $ us = (Game us m r)
-  | otherwise = stepUntilVictory . step $ (Game us m r)
+  | otherwise = stepUntilVictory ap . step ap $ (Game us m r)
 
 move :: Int -> Game -> Game
 move idx game = game'
@@ -195,18 +199,20 @@ computeDistanceField (Game us m r) (y,x) = final
 reachable :: [[Int]] -> (Int,Int) -> Bool
 reachable ds (y,x) = ds!!y!!x > -1
 
-attack :: Int -> Game -> Game
-attack i game = (Game us' m r)
+attack :: Int -> Int -> Game -> Game
+attack ap i game = (Game us' m r)
   where
     r = gameRounds game
     m = gameMap game
     us = gameUnits game
+    (Unit _ _ t _) = us!!i
+    ap' = if (t=='E') then ap else 3
     alist = attackList i game
     (_,j) = head $ alist
     (Unit y' x' t' h') = us!!j
     us'
       | null $ alist = us 
-      | otherwise = replaceAt us j (Unit y' x' t' (h'-3))
+      | otherwise = replaceAt us j (Unit y' x' t' (h'-ap'))
 
 attackList :: Int -> Game -> [(Int, Int)]
 attackList i (Game us m r) = sort $ foldl (find) [] [0..length us-1]
@@ -232,7 +238,22 @@ score (Game us m r) = (r-1) * foldl (score') 0 us
       | otherwise = s + h
 
 solveA :: String -> Int
-solveA = score . stepUntilVictory . parse 
+solveA = score . stepUntilVictory 3 . parse 
+
+solveB :: String -> Int
+solveB input = find [3..]
+  where
+    initial = parse $ input
+    countElves game = length
+                    . filter (\(Unit _ _ t h) -> t == 'E' && h > 0)
+                    . gameUnits $ game
+    find (ap:aps)
+      | trace ("Trying ap "++show ap) False = undefined
+      | countElves sim == countElves initial = score $ sim 
+      | otherwise = find aps
+        where
+          sim = stepUntilVictory ap $ initial
+    
 
 plot :: Game -> IO()
 plot (Game us m r) = do
