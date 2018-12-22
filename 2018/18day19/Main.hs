@@ -28,11 +28,12 @@ data VM = VM {
     vmIpIdx :: Int,
     vmIp :: Int,
     vmRegisters :: [Int],
-    vmInstructions :: [IS]
+    vmInstructions :: [IS],
+    vmOptim :: Bool
   } deriving (Show)
 
 parse :: String -> VM
-parse input = (VM ipidx 0 reg inst)
+parse input = (VM ipidx 0 reg inst False)
   where
     ls = lines $ input
     ipidx = read ((words . head $ ls)!!1)
@@ -44,14 +45,31 @@ parse input = (VM ipidx 0 reg inst)
         r x = read (ws!!x)
 
 step :: VM -> VM
-step vm = vm { vmIp = ip', vmRegisters = reg' }
+step vm
+  -- Decompiled the program and figured out a faster solution
+  -- See "notes" file for the derivation
+  | vmOptim vm = setIp 9999
+               . setRegister 0 (sum . filter (\x -> 10551331 `mod` x == 0) $ [1..10551331]) $ vm
+  -- initial optimization that allowed me to see what values it's looking for
+  | innerLoopCheck = vm { vmIp = 12, vmRegisters = regil }
+  -- default execution path
+  | otherwise = vm { vmIp = ip', vmRegisters = reg' }
   where
+    -- Inner loop optimization
+    innerLoopCheck = ip == 3 && (vmOptim vm)
+    regil0
+      | (reg!!5) `mod` (reg!!1) == 0 = reg!!0 + reg!!1
+      | otherwise = reg!!0
+    regil = [regil0, reg!!1, reg!!2, 1, reg!!5 + 1, reg!!5]
+    -- Normal execution
+    ip = vmIp vm
     ip' = reg'!!(vmIpIdx vm) + 1
-    reg = replaceAt (vmRegisters vm) (vmIpIdx vm) (vmIp vm)
-    reg' = exec reg ((vmInstructions vm)!!(vmIp vm))
+    reg = replaceAt (vmRegisters vm) (vmIpIdx vm) ip
+    reg' = exec reg ((vmInstructions vm)!!ip)
 
 run :: VM -> VM
 run vm
+  -- | trace (show (vmIp vm) ++ " " ++ show (vmRegisters vm)) False = undefined
   | (vmIp vm) >= length (vmInstructions vm) = vm
   | otherwise = run . step $ vm
 
@@ -78,6 +96,18 @@ exec reg (IS op a b c)
 solveA :: String -> Int
 solveA = head . vmRegisters . run . parse
 
+setIp :: Int -> VM -> VM
+setIp ip vm = vm {vmIp = ip}
+
+setRegister :: Int -> Int -> VM -> VM
+setRegister idx val vm = vm { vmRegisters = replaceAt (vmRegisters vm) idx val }
+
+setOptim :: VM -> VM
+setOptim vm = vm { vmOptim = True }
+
+solveB :: String -> Int
+solveB = head . vmRegisters . run . setOptim . setRegister 0 1 . parse
+
 replaceAt :: [a] -> Int -> a -> [a]
 replaceAt s idx t = take idx s ++ [t] ++ drop (idx+1) s
 
@@ -97,10 +127,5 @@ main = do
   input <- readFile "input.txt"
   putStrLn "Solution for A:"
   print . solveA $ input
-  -- putStrLn "Solution for B:"
-  -- print . solveB $ inputb
-  -- print . parse $ testInput
-  -- print . run . parse $ testInput
-  -- print . step . parse $ testInput
-  -- print . step . step . parse $ testInput
-  -- print . step . step . step . parse $ testInput
+  putStrLn "Solution for B:"
+  print . solveB $ input
