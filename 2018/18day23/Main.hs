@@ -18,8 +18,16 @@ testInput = "pos=<0,0,0>, r=4\n\
             \pos=<1,1,2>, r=1\n\
             \pos=<1,3,1>, r=1"
 
+testInputB = "pos=<10,12,12>, r=2\n\
+             \pos=<12,14,12>, r=2\n\
+             \pos=<16,12,12>, r=4\n\
+             \pos=<14,14,14>, r=6\n\
+             \pos=<50,50,50>, r=200\n\
+             \pos=<10,10,10>, r=5"
+
 tests = TestList [
-    addTest solveA testInput 7
+    addTest solveA testInput 7,
+    addTest solveB testInputB 36
   ]
 
 data Bot = Bot Int Int Int Int deriving (Show)
@@ -60,6 +68,11 @@ solveA = solve . parse
   where
     solve bots = countNeighbors bots . findMaxSignal $ bots
 
+solveB :: String -> Int
+solveB = solve . parse
+  where -- NYI!
+    solve bots = countNeighbors bots . findMaxSignal $ bots
+
 --------------------------------------------------------------------------------
 -- Day-agnostic part. Is the same every day of AoC
 --------------------------------------------------------------------------------
@@ -77,5 +90,7 @@ main = do
   putStrLn "Solution for A:"
   print . solveA $ input
   putStrLn "Solution for B:"
-  -- print . solveB $ input
+  print . solveB $ input
 
+-- Right solution for B: 86871407 from reddit
+-- Algorithm isn't correct though
