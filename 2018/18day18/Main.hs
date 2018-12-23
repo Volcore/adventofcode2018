@@ -4,6 +4,8 @@ import Test.HUnit
 import Debug.Trace
 import Data.List (intercalate, sort, group)
 import Data.List.Split (chunksOf)
+import Data.Map (Map)
+import qualified Data.Map as Map
 
 --------------------------------------------------------------------------------
 -- Day specific part. This is where the implementation happens
@@ -39,6 +41,33 @@ solveA = foldl (*) 1
        . iterate (step)
        . parse
 
+stepSmart :: Map String Int -> Int -> [[Char]] -> [[Char]]
+stepSmart hist count m
+  | count == 0 = m
+  | Map.member k hist = trace("Found repetition at "
+                              ++show count
+                              ++" from "
+                              ++show lastCount
+                              ++ " remain "
+                              ++ show remain)
+      head . drop remain . iterate (step) $ m
+  | otherwise = stepSmart hist' (count-1) (step m)
+  where
+    k = concat $ m 
+    hist' = Map.insert k count hist
+    (Just lastCount) = Map.lookup k hist
+    remain = count `mod` (lastCount - count)
+
+solveB :: String -> Int
+solveB = foldl (*) 1
+       . map (length)
+       . group
+       . sort
+       . filter (`elem` "|#")
+       . concat
+       . stepSmart Map.empty 1000000000
+       . parse
+
 getNeighbors :: Int -> Int -> [[Char]] -> (Int, Int)
 getNeighbors x y m = foldl (count) (0, 0) $ [(x,y)|x<-[x-1..x+1],y<-[y-1..y+1]]
   where
@@ -71,7 +100,6 @@ replaceAt s idx t = take idx s ++ [t] ++ drop (idx+1) s
 replaceAt2 :: [[a]] -> Int -> Int -> a -> [[a]]
 replaceAt2 s y x t = replaceAt s y (replaceAt (s!!y) x t)
 
-
 --------------------------------------------------------------------------------
 -- Day-agnostic part. Is the same every day of AoC
 --------------------------------------------------------------------------------
@@ -88,11 +116,5 @@ main = do
   input <- readFile "input.txt"
   putStrLn "Solution for A:"
   print . solveA $ input
-  -- putStrLn "Solution for B:"
-  -- print . solveB $ inputb
-  -- putStrLn . intercalate "\n" . parse $ testInput
-  -- print . getNeighbors 6 1 . parse $ testInput
-  -- putStrLn . intercalate "\n" . step . parse $ testInput
-  -- putStrLn . intercalate "\n" . head . drop 10 . iterate (step) . parse $ testInput
-  -- print . group . sort . filter (`elem` "|#") . concat . head . drop 10 . iterate (step) . parse $ testInput
-  -- print . foldl (*) 1 . map (length) . group . sort . filter (`elem` "|#") . concat . head . drop 10 . iterate (step) . parse $ testInput
+  putStrLn "Solution for B:"
+  print . solveB $ input
