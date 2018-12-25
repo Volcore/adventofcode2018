@@ -29,7 +29,7 @@ def partition(coords):
   return clusterlist
 
 
-def runA(text):
+def run_a(text):
   coords = parse(text)
   cs = partition(coords)
   return len(cs)
@@ -43,7 +43,7 @@ testInput1 = """\
  0,0,0,6
  9,0,0,0
 12,0,0,0"""
-assert runA(testInput1) == 2
+assert run_a(testInput1) == 2
 
 testInput2 = """\
 -1,2,2,0
@@ -56,7 +56,7 @@ testInput2 = """\
 -1,0,-1,0
 0,2,1,-2
 3,0,0,0"""
-assert runA(testInput2) == 4
+assert run_a(testInput2) == 4
 
 testInput3 = """\
 1,-1,0,1
@@ -69,7 +69,7 @@ testInput3 = """\
 2,-2,0,-1
 1,-1,0,-1
 3,2,0,2"""
-assert runA(testInput3) == 3
+assert run_a(testInput3) == 3
 
 testInput4 = """\
 1,-1,-1,-2
@@ -82,6 +82,6 @@ testInput4 = """\
 -2,2,3,-1
 1,2,2,0
 -1,-2,0,-2"""
-assert runA(testInput4) == 8
+assert run_a(testInput4) == 8
 
-print("Solution for A: %s"%(runA(open("input.txt", "rt").read())))
+print("Solution for A: %s"%(run_a(open("input.txt", "rt").read())))
