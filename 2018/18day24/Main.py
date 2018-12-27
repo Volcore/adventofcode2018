@@ -1,5 +1,6 @@
 # Switching to python... sorry. Haskell was too much to handle.
 import re
+import copy
 
 # 11573 for A too low
 # 17734 for A too low
@@ -89,6 +90,7 @@ def fight(battle):
     attacker["target"] = target_idx
   # attack:
   #   deal damage based on initiative
+  stale = True
   attackers = sorted(attackers, key=lambda group: group["initiative"], reverse=True)
   for attacker in attackers:
     if attacker["target"] == None: continue
@@ -99,7 +101,9 @@ def fight(battle):
     damage *= actual_attacker["count"]
     hp = actual_defender["hp"]
     dead_units = min(actual_defender["count"], int(int(damage) / int(hp)))
+    if dead_units > 0: stale = False
     actual_defender["count"] -= dead_units
+  if stale: return [] # just hack the battle empty for now when stale.
   # return alive groups
   return [group for group in battle if group["count"] > 0]
 
@@ -123,6 +127,25 @@ def run_a(text):
   # pretty_print(battle)
   return sum([group["count"] for group in battle])
 
+def add_boost(battle, amount):
+  for group in battle:
+    if group["faction"] != "immune": continue
+    group["damage"] += amount
+  return battle
+
+def run_b(text):
+  proto_battle = parse(text)
+  boost = 1
+  while True:
+    battle = copy.deepcopy(proto_battle)
+    battle = add_boost(battle, boost)
+    while not is_over(battle):
+      battle = fight(battle)
+    count = sum([group["count"] for group in battle if group["faction"] == "immune"])
+    if count > 0:
+      return count
+    boost += 1
+
 testInput = """\
 Immune System:
 17 units each with 5390 hit points (weak to radiation, bludgeoning) with an attack that does 4507 fire damage at initiative 2
@@ -136,3 +159,6 @@ assert run_a(testInput) == 5216
 
 input_a = open("input.txt", "rt").read()
 print("Solution for A: %s"%run_a(input_a))
+
+assert run_b(testInput) == 51
+print("Solution for B: %s"%run_b(input_a))
