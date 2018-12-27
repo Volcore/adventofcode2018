@@ -4,4 +4,4 @@ SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
 
 cd $SCRIPTPATH
 
-runhaskell Main.hs
+python3 Main.py
